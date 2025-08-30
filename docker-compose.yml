@@ -1,0 +1,10 @@
+services:
+  scheduler.api:
+    image: ${DOCKER_REGISTRY-}schedulerapi
+    container_name: scheduler.api
+    build:
+      context: .
+      dockerfile: Scheduler.Api/Dockerfile
+    ports:
+      - "8080:8080"
+      - "8081:8081"
