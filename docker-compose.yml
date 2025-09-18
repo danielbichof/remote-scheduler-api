@@ -1,34 +1,40 @@
-version: '3.8'
-
 services:
-  postgres_db:
-    image: postgres:15
-    container_name: scheduler_postgres_db
-    restart: always
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=distrito@404
-      - POSTGRES_DB=SchedulerDb
-    ports:
-      - "5433:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-
   scheduler.api:
     image: ${DOCKER_REGISTRY-}schedulerapi
     container_name: scheduler.api
     build:
       context: .
       dockerfile: Scheduler.Api/Dockerfile
-    restart: on-failure
     ports:
       - "8080:8080"
+    depends_on:
+      - postgres
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=Server=postgres_db;Port=5432;Database=SchedulerDb;User Id=postgres;Password=distrito@404;
-    depends_on:
-      - postgres_db
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=schedulerdb;Username=scheduler;Password=schedulerpass
+    networks:
+      - dotnet
+
+  postgres:
+    image: postgres:16
+    container_name: scheduler.postgres
+    restart: always
+    environment:
+      POSTGRES_DB: schedulerdb
+      POSTGRES_USER: scheduler
+      POSTGRES_PASSWORD: schedulerpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - dotnet
+    
 
 volumes:
-  db_data:
+  pgdata:
+      driver: local
+
+networks:
+    dotnet:
+        driver: bridge
