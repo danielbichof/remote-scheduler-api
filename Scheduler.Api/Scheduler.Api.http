@@ -2,6 +2,7 @@
 
 GET {{Scheduler.Api_HostAddress}}/swagger/
 GET {{Scheduler.Api_HostAddress}}/v1/
+GET {{Scheduler.Api_HostAddress}}/v1/secure/
 Accept: application/json
 
 ###
