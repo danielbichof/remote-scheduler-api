@@ -19,12 +19,16 @@ namespace Scheduler.Infrastructure.Repositories
 
         public async Task<PlannedSchedule?> GetByIdAsync(int id)
         {
-            return await _context.PlannedSchedules.FindAsync(id);
+            return await _context.PlannedSchedules
+                .Include(p => p.User)
+                .FirstOrDefaultAsync(p => p.Id == id);
         }
 
         public async Task<List<PlannedSchedule>> GetAllAsync()
         {
-            return await _context.PlannedSchedules.ToListAsync();
+            return await _context.PlannedSchedules
+                .Include(p => p.User)
+                .ToListAsync();
         }
 
         public async Task AddAsync(PlannedSchedule plannedSchedule)

@@ -10,14 +10,14 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scheduler.Domain", "Scheduler.Domain\Scheduler.Domain.csproj", "{D4561FBC-8942-4305-A095-E35618D33C0F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scheduler.Infrastructure", "Scheduler.Infrastructure\Scheduler.Infrastructure.csproj", "{356EB394-3120-4ACB-9C78-EBDAA084C7DD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0C4B101F-A350-442C-A2E8-DF29F7F64054} = {0C4B101F-A350-442C-A2E8-DF29F7F64054}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{2A6926D1-AE49-46D3-B298-F40501336AB7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -36,5 +36,11 @@ Global
 		{356EB394-3120-4ACB-9C78-EBDAA084C7DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{356EB394-3120-4ACB-9C78-EBDAA084C7DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{356EB394-3120-4ACB-9C78-EBDAA084C7DD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D048C37F-5F20-4B08-89DF-B054E30F9BCF}
 	EndGlobalSection
 EndGlobal

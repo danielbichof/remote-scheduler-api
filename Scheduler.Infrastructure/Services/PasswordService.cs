@@ -1,0 +1,33 @@
+﻿using Microsoft.Extensions.Configuration;
+using Scheduler.Application.Services;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace Scheduler.Infrastructure.Services
+{
+    public class PasswordService : IPasswordService
+    {
+        public PasswordService()
+        {
+        }
+
+        public void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
+        {
+            using (var hmac = new HMACSHA512())
+            {
+                passwordSalt = hmac.Key;
+                passwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
+            }
+        }
+
+        public bool VerifyPasswordHash(string password, byte[] storedHash, byte[] storedSalt)
+        {
+            using (var hmac = new HMACSHA512(storedSalt))
+            {
+                var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
+                return computedHash.SequenceEqual(storedHash);
+            }
+        }
+    }
+}
