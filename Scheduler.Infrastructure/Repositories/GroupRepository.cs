@@ -19,12 +19,20 @@ namespace Scheduler.Infrastructure.Repositories
 
         public async Task<Group?> GetByIdAsync(int id)
         {
-            return await _context.Groups.FindAsync(id);
+            return await _context.Groups
+                .Include(g => g.PrimarySchedule)
+                .Include(g => g.SecondarySchedule)
+                .Include(g => g.Users)
+                .FirstOrDefaultAsync(g => g.Id == id);
         }
 
         public async Task<List<Group>> GetAllAsync()
         {
-            return await _context.Groups.ToListAsync();
+            return await _context.Groups
+                .Include(g => g.PrimarySchedule)
+                .Include(g => g.SecondarySchedule)
+                .Include(g => g.Users)
+                .ToListAsync();
         }
 
         public async Task AddAsync(Group group)

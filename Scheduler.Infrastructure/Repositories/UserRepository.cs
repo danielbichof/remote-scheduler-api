@@ -17,12 +17,22 @@ namespace Scheduler.Infrastructure.Repositories
 
         public async Task<User?> GetByIdAsync(int id)
         {
-            return await _context.Users.FindAsync(id);
+            return await _context.Users
+                .Include(u => u.Group)
+                .Include(u => u.Role)
+                .Include(u => u.Manager)
+                .Include(u => u.Subordinates)
+                .FirstOrDefaultAsync(u => u.Id == id);
         }
 
         public async Task<List<User>> GetAllAsync()
         {
-            return await _context.Users.ToListAsync();
+            return await _context.Users
+                .Include(u => u.Group)
+                .Include(u => u.Role)
+                .Include(u => u.Manager)
+                .Include(u => u.Subordinates)
+                .ToListAsync();
         }
 
         public async Task AddAsync(User user)
@@ -38,6 +48,15 @@ namespace Scheduler.Infrastructure.Repositories
         public void Delete(User user)
         {
             _context.Users.Remove(user);
+        }
+        public async Task<User?> GetByEmailAsync(string email)
+        {
+            return await _context.Users
+                .Include(u => u.Group)
+                .Include(u => u.Role)
+                .Include(u => u.Manager)
+                .Include(u => u.Subordinates)
+                .FirstOrDefaultAsync(u => u.Email == email);
         }
     }
 }

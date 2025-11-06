@@ -19,12 +19,16 @@ namespace Scheduler.Infrastructure.Repositories
 
         public async Task<Role?> GetByIdAsync(int id)
         {
-            return await _context.Roles.FindAsync(id);
+            return await _context.Roles
+                .Include(r => r.Permissions)
+                .FirstOrDefaultAsync(r => r.Id == id);
         }
 
         public async Task<List<Role>> GetAllAsync()
         {
-            return await _context.Roles.ToListAsync();
+            return await _context.Roles
+                .Include(r => r.Permissions)
+                .ToListAsync();
         }
 
         public async Task AddAsync(Role role)
