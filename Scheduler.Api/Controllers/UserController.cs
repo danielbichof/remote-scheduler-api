@@ -21,7 +21,7 @@ public class UsersController : ControllerBase
         try
         {
             await _userService.RegisterUserAsync(registerDto);
-            return Ok(new { message = "Usuário registrado com sucesso. Um e-mail de confirmação foi enviado." });
+            return Ok(new { message = "Usuário registrado com sucesso. Um e-mail de confirmação foi enviado." });   
         }
         catch (Exception ex)
         {

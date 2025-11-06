@@ -26,6 +26,15 @@ namespace Scheduler.Infrastructure.Repositories
                 .FirstOrDefaultAsync(g => g.Id == id);
         }
 
+        public async Task<Group?> GetByNameAsync(string name)
+        {
+            return await _context.Groups
+                .Include(g => g.PrimarySchedule)
+                .Include(g => g.SecondarySchedule)
+                .Include(g => g.Users)
+                .FirstOrDefaultAsync(g => g.Name == name);
+        }
+
         public async Task<List<Group>> GetAllAsync()
         {
             return await _context.Groups

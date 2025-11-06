@@ -1,68 +1,83 @@
-﻿using Scheduler.Application.DTOs;
-using Scheduler.Application.Services;
+﻿using System;
+using System.Threading.Tasks;
+using Scheduler.Application.DTOs;
 using Scheduler.Domain.Entities;
 using Scheduler.Domain.Interfaces;
-using System;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading.Tasks;
 
-
-namespace Scheduler.Application.Services { 
-
+namespace Scheduler.Application.Services
+{
     public class UserService : IUserService
     {
+        private const string DefaultRoleName = "default-user";
+        private const string DefaultRoleDisplayName = "Usuario Padrao";
+        private const string DefaultGroupName = "Grupo Padrao";
+        private const string DefaultGroupDescription = "Grupo atribuido automaticamente a novos usuarios.";
+
         private readonly IUserRepository _userRepository;
         private readonly IPasswordService _passwordService;
         private readonly IEmailService _emailService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IRoleRepository _roleRepository;
+        private readonly IGroupRepository _groupRepository;
 
-        // Injetamos todas as dependências que precisamos
         public UserService(
             IUserRepository userRepository,
             IPasswordService passwordService,
             IEmailService emailService,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IRoleRepository roleRepository,
+            IGroupRepository groupRepository)
         {
             _userRepository = userRepository;
             _passwordService = passwordService;
             _emailService = emailService;
             _unitOfWork = unitOfWork;
+            _roleRepository = roleRepository;
+            _groupRepository = groupRepository;
         }
 
         public async Task RegisterUserAsync(RegisterUserDto registerDto)
         {
-            // Temporariamente não verificamos e-mail duplicado para facilitar testes.
-            // Reverter essa mudança antes de ir para produção.
+            // Temporarily skip duplicate e-mail validation to simplify testing.
+            var now = DateTime.UtcNow;
 
-            // 2. Criptografar a senha
-            _passwordService.CreatePasswordHash(registerDto.Password, out byte[] passwordHash, out byte[] passwordSalt);
+            _passwordService.CreatePasswordHash(registerDto.Password, out var passwordHash, out var passwordSalt);
 
-            // 3. Criar a nova entidade User
+            var defaultRole = await EnsureDefaultRoleAsync(now);
+            var defaultGroup = await EnsureDefaultGroupAsync(now);
+
             var user = new User
             {
                 Username = registerDto.Username,
                 Email = registerDto.Email,
                 PasswordHash = passwordHash,
                 PasswordSalt = passwordSalt,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                // TODO: Definir RoleId e GroupId padrão, se necessário
-                RoleId = 1, // Exemplo: 1 = Usuário Padrão
-                GroupId = 1 // Exemplo: 1 = Grupo Padrão
+                CreatedAt = now,
+                UpdatedAt = now
             };
 
-            // 4. Adicionar o usuário ao repositório
+            if (defaultRole.Id > 0)
+            {
+                user.RoleId = defaultRole.Id;
+            }
+            else
+            {
+                user.Role = defaultRole;
+            }
+
+            if (defaultGroup.Id > 0)
+            {
+                user.GroupId = defaultGroup.Id;
+            }
+            else
+            {
+                user.Group = defaultGroup;
+            }
+
             await _userRepository.AddAsync(user);
 
-            // 5. Não enviar e-mail durante testes. Em produção, reativar envio.
-            // var emailBody = $"<h1>Bem-vindo, {user.Username}!</h1><p>Seu cadastro em SchedulerApp foi realizado com sucesso.</p>";
-            // await _emailService.SendEmailAsync(user.Email, "Cadastro Realizado com Sucesso!", emailBody);
+            // Intentionally skipping e-mail notifications during development.
 
-            // 6. Salvar tudo no banco de dados
             await _unitOfWork.CompleteAsync();
         }
 
@@ -70,9 +85,45 @@ namespace Scheduler.Application.Services {
         {
             var user = await _userRepository.GetByEmailAsync(email);
             if (user == null) return null;
+
             var ok = _passwordService.VerifyPasswordHash(password, user.PasswordHash, user.PasswordSalt);
             if (!ok) return null;
+
             return (user.Id, user.Username, user.Email);
+        }
+
+        private async Task<Role> EnsureDefaultRoleAsync(DateTime now)
+        {
+            var role = await _roleRepository.GetByNameAsync(DefaultRoleName);
+            if (role != null) return role;
+
+            role = new Role
+            {
+                Name = DefaultRoleName,
+                DisplayName = DefaultRoleDisplayName,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+
+            await _roleRepository.AddAsync(role);
+            return role;
+        }
+
+        private async Task<Group> EnsureDefaultGroupAsync(DateTime now)
+        {
+            var group = await _groupRepository.GetByNameAsync(DefaultGroupName);
+            if (group != null) return group;
+
+            group = new Group
+            {
+                Name = DefaultGroupName,
+                Description = DefaultGroupDescription,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+
+            await _groupRepository.AddAsync(group);
+            return group;
         }
     }
 }

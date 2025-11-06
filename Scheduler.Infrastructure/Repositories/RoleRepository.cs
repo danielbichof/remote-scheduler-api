@@ -24,6 +24,13 @@ namespace Scheduler.Infrastructure.Repositories
                 .FirstOrDefaultAsync(r => r.Id == id);
         }
 
+        public async Task<Role?> GetByNameAsync(string name)
+        {
+            return await _context.Roles
+                .Include(r => r.Permissions)
+                .FirstOrDefaultAsync(r => r.Name == name);
+        }
+
         public async Task<List<Role>> GetAllAsync()
         {
             return await _context.Roles
