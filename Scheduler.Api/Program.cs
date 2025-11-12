@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Scheduler.Domain.Interfaces;
 using Scheduler.Infrastructure.Data;
+using Scheduler.Infrastructure.Data.Seeding;
 using Scheduler.Infrastructure.Repositories;
 using Scheduler.Application.Services;
 using Scheduler.Infrastructure.Services;
@@ -42,6 +43,24 @@ builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
 builder.Services.AddScoped<IMonthlyScheduleService, MonthlyScheduleService>();
 
 var app = builder.Build();
+
+// Run database seeding
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        var passwordService = new PasswordService();
+        var seeder = new DataSeeder(context, passwordService);
+        await seeder.SeedAsync();
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the database.");
+    }
+}
 
 if (app.Environment.IsDevelopment())
 {
