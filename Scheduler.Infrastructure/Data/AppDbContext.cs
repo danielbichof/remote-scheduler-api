@@ -6,13 +6,12 @@ namespace Scheduler.Infrastructure.Data
 {
     public class AppDbContext : DbContext
     {
-        // Este construtor é essencial para a Injeção de Dependência funcionar.
+        // Este construtor ï¿½ essencial para a Injeï¿½ï¿½o de Dependï¿½ncia funcionar.
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
         }
 
         // --- Mapeamento das Entidades para Tabelas (DbSets) ---
-        // Para cada entidade que você quer que vire uma tabela, adicione um DbSet.
         public DbSet<User> Users { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<Schedule> Schedules { get; set; }
@@ -25,13 +24,57 @@ namespace Scheduler.Infrastructure.Data
         public DbSet<Log> Logs { get; set; }
 
 
-        // --- Configurações Finas dos Relacionamentos (Fluent API) ---
-        // Este método é onde ensinamos ao EF Core as regras complexas do nosso modelo.
+        // --- Configuraï¿½ï¿½es Finas dos Relacionamentos (Fluent API) ---
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // --- Configuração para a entidade User ---
+            // ======================================================================
+            // --- 1. DATA SEEDING (Dados Iniciais) ---
+            // Inserimos os dados mï¿½nimos para o sistema funcionar.
+            // ======================================================================
+
+            // Roles Essenciais
+            modelBuilder.Entity<Role>().HasData(
+                new Role { Id = 1, Name = "Admin", DisplayName = "Administrador" },
+                new Role { Id = 2, Name = "User", DisplayName = "Usuï¿½rio" }
+            );
+
+            // Dias da Semana (Necessï¿½rio para Schedules)
+            modelBuilder.Entity<Weekday>().HasData(
+                new Weekday { Id = 1, DayName = "Domingo" },
+                new Weekday { Id = 2, DayName = "Segunda-feira" },
+                new Weekday { Id = 3, DayName = "Terï¿½a-feira" },
+                new Weekday { Id = 4, DayName = "Quarta-feira" },
+                new Weekday { Id = 5, DayName = "Quinta-feira" },
+                new Weekday { Id = 6, DayName = "Sexta-feira" },
+                new Weekday { Id = 7, DayName = "Sï¿½bado" }
+            );
+
+            // Horï¿½rio Padrï¿½o (Dependï¿½ncia para o Grupo Padrï¿½o)
+            // Seus avisos de compilaï¿½ï¿½o (CS8618) para Group indicam que
+            // PrimarySchedule e SecondarySchedule nï¿½o podem ser nulos.
+            modelBuilder.Entity<Schedule>().HasData(
+                new Schedule { Id = 1, Title = "Horï¿½rio Padrï¿½o", Description = "Horï¿½rio de fallback inicial." }
+            );
+
+            // Grupo Padrï¿½o (Resolve o erro FK_Users_Groups_GroupId)
+            modelBuilder.Entity<Group>().HasData(
+                new Group
+                {
+                    Id = 1,
+                    Name = "Grupo Padrï¿½o",
+                    Description = "Grupo inicial para novos usuï¿½rios",
+                    PrimaryScheduleId = 1,  // Linkado ao Schedule(Id=1)
+                    SecondaryScheduleId = 1 // Linkado ao Schedule(Id=1)
+                }
+            );
+
+            // ======================================================================
+            // --- 2. CONFIGURAï¿½ï¿½ES DE RELACIONAMENTO (Fluent API) ---
+            // ======================================================================
+
+            // --- Configuraï¿½ï¿½o para a entidade User ---
             modelBuilder.Entity<User>(entity =>
             {
                 // Configura o auto-relacionamento de Manager/Subordinates
@@ -41,55 +84,55 @@ namespace Scheduler.Infrastructure.Data
                       .OnDelete(DeleteBehavior.Restrict); // Impede que um gerente seja deletado se tiver subordinados.
             });
 
-            // --- Configuração para a entidade Group ---
+            // --- Configuraï¿½ï¿½o para a entidade Group ---
             modelBuilder.Entity<Group>(entity =>
             {
                 // Configura as DUAS chaves estrangeiras para a mesma tabela Schedule
                 entity.HasOne(g => g.PrimarySchedule)
-                      .WithMany(s => s.PrimaryGroups) // Usa a propriedade de navegação inversa correta
+                      .WithMany(s => s.PrimaryGroups) // Usa a propriedade de navegaï¿½ï¿½o inversa correta
                       .HasForeignKey(g => g.PrimaryScheduleId)
                       .OnDelete(DeleteBehavior.SetNull); // Ex: Se a escala for deletada, o campo no grupo fica nulo.
 
                 entity.HasOne(g => g.SecondarySchedule)
-                      .WithMany(s => s.SecondaryGroups) // Usa a outra propriedade de navegação
+                      .WithMany(s => s.SecondaryGroups) // Usa a outra propriedade de navegaï¿½ï¿½o
                       .HasForeignKey(g => g.SecondaryScheduleId)
                       .OnDelete(DeleteBehavior.SetNull);
             });
 
-            // --- Configuração para a entidade ScheduleDay ---
+            // --- Configuraï¿½ï¿½o para a entidade ScheduleDay ---
             modelBuilder.Entity<ScheduleDay>(entity =>
             {
-                // Define a Chave Primária Composta (PK composta por duas colunas)
+                // Define a Chave Primï¿½ria Composta (PK composta por duas colunas)
                 entity.HasKey(sd => new { sd.ScheduleId, sd.WeekdayId });
             });
 
-            // --- Configuração para Role e Permission (Muitos-para-Muitos) ---
+            // --- Configuraï¿½ï¿½o para Role e Permission (Muitos-para-Muitos) ---
             modelBuilder.Entity<Role>(entity =>
             {
-                // Configura a relação muitos-para-muitos com Permission.
-                // O EF Core criará a tabela de junção 'RolePermission' automaticamente.
+                // Configura a relaï¿½ï¿½o muitos-para-muitos com Permission.
+                // O EF Core criarï¿½ a tabela de junï¿½ï¿½o 'RolePermission' automaticamente.
                 entity.HasMany(r => r.Permissions)
                       .WithMany(p => p.Roles);
             });
 
-            // --- Configuração para PlannedScheduleSolicitation (Múltiplas FKs para User) ---
+            // --- Configuraï¿½ï¿½o para PlannedScheduleSolicitation (Mï¿½ltiplas FKs para User) ---
             modelBuilder.Entity<PlannedScheduleSolicitation>(entity =>
             {
-                // Ensina ao EF Core qual propriedade de navegação corresponde a qual chave estrangeira
+                // Ensina ao EF Core qual propriedade de navegaï¿½ï¿½o corresponde a qual chave estrangeira
 
-                // 1. Relação para o Solicitante (RequestedBy)
+                // 1. Relaï¿½ï¿½o para o Solicitante (RequestedBy)
                 entity.HasOne(s => s.RequestedBy)
-                      .WithMany() // Não há coleção inversa em User para esta relação
+                      .WithMany() // Nï¿½o hï¿½ coleï¿½ï¿½o inversa em User para esta relaï¿½ï¿½o
                       .HasForeignKey(s => s.RequestedById)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                // 2. Relação para o Usuário (User)
+                // 2. Relaï¿½ï¿½o para o Usuï¿½rio (User)
                 entity.HasOne(s => s.User)
                       .WithMany()
                       .HasForeignKey(s => s.UserId)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                // 3. Relação para o Revisor (Reviewer)
+                // 3. Relaï¿½ï¿½o para o Revisor (Reviewer)
                 entity.HasOne(s => s.Reviewer)
                       .WithMany()
                       .HasForeignKey(s => s.ReviewerId)

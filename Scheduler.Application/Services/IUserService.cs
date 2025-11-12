@@ -10,6 +10,6 @@ namespace Scheduler.Application.Services
     public interface IUserService
     {
         Task RegisterUserAsync(RegisterUserDto registerDto);
-        Task<(int userId, string username, string email)?> AuthenticateAsync(string email, string password);
+        Task<(int userId, string username, string email, int roleId)?> AuthenticateAsync(string email, string password);
     }
 }

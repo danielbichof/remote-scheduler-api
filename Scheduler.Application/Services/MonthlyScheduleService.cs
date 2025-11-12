@@ -37,85 +37,103 @@ namespace Scheduler.Application.Services
 
             var daysInMonth = DateTime.DaysInMonth(year, month);
 
-            // Determine week index for each date (ISO-like: week starts on Monday)
-            // We'll flip patterns each calendar week.
-
-            // Precompute a mapping date->weekIndex (0-based)
-            var weekIndexByDate = new Dictionary<DateTime, int>();
-            int currentWeek = -1;
-            DateTime? lastMonday = null;
-            for (int d = 1; d <= daysInMonth; d++)
-            {
-                var date = new DateTime(year, month, d);
-                // Find Monday of the week containing this date
-                var monday = date;
-                while (monday.DayOfWeek != DayOfWeek.Monday)
-                    monday = monday.AddDays(-1);
-
-                if (!lastMonday.HasValue || monday != lastMonday.Value)
-                {
-                    currentWeek++;
-                    lastMonday = monday;
-                }
-
-                weekIndexByDate[date] = currentWeek;
-            }
-
             foreach (var user in users)
             {
-                var groupName = user.Group?.Name?.Trim()?.ToUpperInvariant() ?? "A"; // default A
+                if (user.Group == null) continue;
+
+                // Carrega o grupo completo com as escalas e seus dias
+                var group = await _groupRepository.GetByIdAsync(user.Group.Id);
+                if (group == null) continue;
+
+                // Busca as escalas primária e secundária do grupo
+                var primarySchedule = group.PrimarySchedule;
+                var secondarySchedule = group.SecondarySchedule;
+                
+                // Debug: log das escalas encontradas
+                System.Console.WriteLine($"[DEBUG] User {user.Id} ({user.Username}) - Group: {group.Id}");
+                System.Console.WriteLine($"[DEBUG] PrimarySchedule: {(primarySchedule != null ? $"Id={primarySchedule.Id}, Title={primarySchedule.Title}, Days={primarySchedule.ScheduleDays?.Count ?? 0}" : "NULL")}");
+                System.Console.WriteLine($"[DEBUG] SecondarySchedule: {(secondarySchedule != null ? $"Id={secondarySchedule.Id}, Title={secondarySchedule.Title}, Days={secondarySchedule.ScheduleDays?.Count ?? 0}" : "NULL")}");
+                
+                // Se não tiver nenhuma escala, pula o usuário
+                if ((primarySchedule == null || primarySchedule.ScheduleDays == null || !primarySchedule.ScheduleDays.Any()) &&
+                    (secondarySchedule == null || secondarySchedule.ScheduleDays == null || !secondarySchedule.ScheduleDays.Any()))
+                {
+                    System.Console.WriteLine($"[DEBUG] User {user.Id} pulado - nenhuma escala disponível");
+                    continue;
+                }
+
+                // Mapeia os dias da semana das escalas (WeekdayId -> WorkMode)
+                var primaryScheduleDaysMap = primarySchedule?.ScheduleDays
+                    ?.Where(sd => sd.WorkMode.HasValue)
+                    .ToDictionary(sd => sd.WeekdayId, sd => sd.WorkMode.Value) ?? new Dictionary<int, WorkMode>();
+
+                var secondaryScheduleDaysMap = secondarySchedule?.ScheduleDays
+                    ?.Where(sd => sd.WorkMode.HasValue)
+                    .ToDictionary(sd => sd.WeekdayId, sd => sd.WorkMode.Value) ?? new Dictionary<int, WorkMode>();
+
+                System.Console.WriteLine($"[DEBUG] PrimaryScheduleDaysMap: {primaryScheduleDaysMap.Count} dias");
+                System.Console.WriteLine($"[DEBUG] SecondaryScheduleDaysMap: {secondaryScheduleDaysMap.Count} dias");
+
+                // Calcula a primeira segunda-feira do mês (semana que contém o dia 1)
+                var firstDayOfMonth = new DateTime(year, month, 1);
+                var firstMonday = firstDayOfMonth;
+                while (firstMonday.DayOfWeek != DayOfWeek.Monday)
+                    firstMonday = firstMonday.AddDays(-1);
 
                 for (int d = 1; d <= daysInMonth; d++)
                 {
                     var date = new DateTime(year, month, d);
+                    var weekdayId = GetWeekdayId(date.DayOfWeek);
+                    
+                    // Encontra a segunda-feira da semana que contém esta data
+                    var mondayOfWeek = date;
+                    while (mondayOfWeek.DayOfWeek != DayOfWeek.Monday)
+                        mondayOfWeek = mondayOfWeek.AddDays(-1);
+                    
+                    // Calcula o número da semana baseado na diferença de dias desde a primeira segunda-feira
+                    // A primeira semana (que contém o dia 1) sempre será 0
+                    var daysDiff = (mondayOfWeek - firstMonday).TotalDays;
+                    var weekNumber = (int)Math.Floor(daysDiff / 7);
+                    
+                    // Semana 0 (primeira semana do mês) = Primary, depois alterna
+                    // 0 = Primary, 1 = Secondary, 2 = Primary, 3 = Secondary, etc.
+                    var usePrimarySchedule = weekNumber % 2 == 0;
 
-                    // skip weekends
-                    if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
+                    // Debug: log da decisão de escala (apenas para alguns dias para não poluir muito)
+                    if (d <= 3 || d == 8 || d == 15 || d == 22)
+                    {
+                        System.Console.WriteLine($"[DEBUG] Data: {date:yyyy-MM-dd}, WeekNumber: {weekNumber}, UsePrimary: {usePrimarySchedule}, MondayOfWeek: {mondayOfWeek:yyyy-MM-dd}");
+                    }
+
+                    // Seleciona a escala baseado na semana
+                    Dictionary<int, WorkMode> scheduleDaysMap;
+                    if (usePrimarySchedule)
+                    {
+                        // Usa Primary se disponível, senão usa Secondary como fallback
+                        scheduleDaysMap = primaryScheduleDaysMap.Any() ? primaryScheduleDaysMap : secondaryScheduleDaysMap;
+                    }
+                    else
+                    {
+                        // Usa Secondary se disponível, senão usa Primary como fallback
+                        scheduleDaysMap = secondaryScheduleDaysMap.Any() ? secondaryScheduleDaysMap : primaryScheduleDaysMap;
+                    }
+
+                    // Se não tiver nenhuma escala disponível, pula este dia
+                    if (!scheduleDaysMap.Any())
                         continue;
 
-                    var weekIdx = weekIndexByDate[date];
-
-                    // For weekIdx even -> base pattern, weekIdx odd -> swapped patterns
-                    var isSwappedWeek = (weekIdx % 2 != 0);
-
-                    // Base pattern (not swapped):
-                    // Group A: presencial Tue/Thu, remoto other weekdays (Mon, Wed, Fri)
-                    // Group B: inverse - presencial Mon/Wed/Fri, remoto Tue/Thu
-
-                    WorkMode mode;
-
-                    // Determine effective group for this week: if swapped, A<->B
-                    var effectiveGroup = groupName;
-                    if (isSwappedWeek)
+                    // Busca o WorkMode da escala para este dia da semana
+                    if (scheduleDaysMap.TryGetValue(weekdayId, out var workMode))
                     {
-                        if (groupName == "A") effectiveGroup = "B";
-                        else if (groupName == "B") effectiveGroup = "A";
+                        results.Add(new MonthlyScheduleDto
+                        {
+                            UserId = user.Id,
+                            Username = user.Username,
+                            Date = date,
+                            WorkMode = workMode
+                        });
                     }
-
-                    if (effectiveGroup == "A")
-                    {
-                        // A presencial Tue/Thu
-                        if (date.DayOfWeek == DayOfWeek.Tuesday || date.DayOfWeek == DayOfWeek.Thursday)
-                            mode = WorkMode.Office;
-                        else
-                            mode = WorkMode.Remote;
-                    }
-                    else // B
-                    {
-                        // B does the opposite
-                        if (date.DayOfWeek == DayOfWeek.Tuesday || date.DayOfWeek == DayOfWeek.Thursday)
-                            mode = WorkMode.Remote;
-                        else
-                            mode = WorkMode.Office;
-                    }
-
-                    results.Add(new MonthlyScheduleDto
-                    {
-                        UserId = user.Id,
-                        Username = user.Username,
-                        Date = date,
-                        WorkMode = mode
-                    });
+                    // Se não encontrar na escala (null), não adiciona evento (folga/indefinido)
                 }
             }
 
@@ -126,6 +144,14 @@ namespace Scheduler.Application.Services
         private async Task<List<User>> _user_repository_getall_async()
         {
             return await _userRepository.GetAllAsync();
+        }
+
+        // Converte DayOfWeek para WeekdayId (1=Segunda, 2=Terça, ..., 7=Domingo)
+        private int GetWeekdayId(DayOfWeek dayOfWeek)
+        {
+            // C# DayOfWeek: Sunday=0, Monday=1, ..., Saturday=6
+            // Nosso WeekdayId: Monday=1, Tuesday=2, ..., Sunday=7
+            return dayOfWeek == DayOfWeek.Sunday ? 7 : (int)dayOfWeek;
         }
     }
 }

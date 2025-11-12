@@ -19,6 +19,13 @@ namespace Scheduler.Infrastructure.Repositories
         {
             return await _context.Users
                 .Include(u => u.Group)
+                    .ThenInclude(g => g.PrimarySchedule)
+                        .ThenInclude(s => s.ScheduleDays)
+                            .ThenInclude(sd => sd.Weekday)
+                .Include(u => u.Group)
+                    .ThenInclude(g => g.SecondarySchedule)
+                        .ThenInclude(s => s.ScheduleDays)
+                            .ThenInclude(sd => sd.Weekday)
                 .Include(u => u.Role)
                 .Include(u => u.Manager)
                 .Include(u => u.Subordinates)
@@ -29,6 +36,13 @@ namespace Scheduler.Infrastructure.Repositories
         {
             return await _context.Users
                 .Include(u => u.Group)
+                    .ThenInclude(g => g.PrimarySchedule)
+                        .ThenInclude(s => s.ScheduleDays)
+                            .ThenInclude(sd => sd.Weekday)
+                .Include(u => u.Group)
+                    .ThenInclude(g => g.SecondarySchedule)
+                        .ThenInclude(s => s.ScheduleDays)
+                            .ThenInclude(sd => sd.Weekday)
                 .Include(u => u.Role)
                 .Include(u => u.Manager)
                 .Include(u => u.Subordinates)
@@ -53,6 +67,13 @@ namespace Scheduler.Infrastructure.Repositories
         {
             return await _context.Users
                 .Include(u => u.Group)
+                    .ThenInclude(g => g.PrimarySchedule)
+                        .ThenInclude(s => s.ScheduleDays)
+                            .ThenInclude(sd => sd.Weekday)
+                .Include(u => u.Group)
+                    .ThenInclude(g => g.SecondarySchedule)
+                        .ThenInclude(s => s.ScheduleDays)
+                            .ThenInclude(sd => sd.Weekday)
                 .Include(u => u.Role)
                 .Include(u => u.Manager)
                 .Include(u => u.Subordinates)

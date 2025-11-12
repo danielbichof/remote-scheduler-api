@@ -21,7 +21,7 @@ public class UsersController : ControllerBase
         try
         {
             await _userService.RegisterUserAsync(registerDto);
-            return Ok(new { message = "Usuário registrado com sucesso. Um e-mail de confirmação foi enviado." });   
+            return Ok(new { message = "Usuário registrado com sucesso. Um e-mail de confirmação foi enviado." });
         }
         catch (Exception ex)
         {
@@ -44,6 +44,6 @@ public class UsersController : ControllerBase
             return Unauthorized(new { message = "Credenciais inválidas" });
         }
 
-        return Ok(new { userId = result?.userId, username = result?.username, email = result?.email });
+        return Ok(new { userId = result?.userId, username = result?.username, email = result?.email, roleId = result?.roleId });
     }
 }

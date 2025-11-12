@@ -32,15 +32,15 @@ namespace Scheduler.Api.Controllers.Admin
             try
             {
                 var users = await _userRepository.GetAllAsync();
-                // retorna apenas campos básicos (sem PasswordHash/PasswordSalt e sem relacionamentos circulares)
-                var result = users.Select(u => new 
+                // Retornar DTOs seguros (sem PasswordHash/PasswordSalt e sem relacionamentos circulares)
+                var result = users.Select(u => new UserResponseDto
                 { 
                     Id = u.Id, 
                     Username = u.Username ?? string.Empty, 
                     Email = u.Email ?? string.Empty, 
                     RoleId = u.RoleId, 
                     GroupId = u.GroupId, 
-                    ManagerId = u.ManagerId, 
+                    ManagerId = u.ManagerId,
                     CreatedAt = u.CreatedAt, 
                     UpdatedAt = u.UpdatedAt 
                 }).ToList();
@@ -57,8 +57,21 @@ namespace Scheduler.Api.Controllers.Admin
         {
             var user = await _userRepository.GetByIdAsync(id);
             if (user == null) return NotFound();
-            // retorna apenas campos básicos (sem PasswordHash/PasswordSalt)
-            return Ok(new { user.Id, user.Username, user.Email, user.RoleId, user.GroupId, user.ManagerId, user.CreatedAt, user.UpdatedAt });
+            
+            // Retornar DTO seguro (sem PasswordHash/PasswordSalt e sem relacionamentos circulares)
+            var response = new UserResponseDto
+            {
+                Id = user.Id,
+                Username = user.Username ?? string.Empty,
+                Email = user.Email ?? string.Empty,
+                RoleId = user.RoleId,
+                GroupId = user.GroupId,
+                ManagerId = user.ManagerId,
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt
+            };
+            
+            return Ok(response);
         }
 
         [HttpPost]
@@ -87,21 +100,41 @@ namespace Scheduler.Api.Controllers.Admin
 
             await _userRepository.AddAsync(user);
             await _unitOfWork.CompleteAsync();
-            return CreatedAtAction(nameof(Get), new { id = user.Id }, user);
+
+            // Retornar DTO seguro (sem PasswordHash, PasswordSalt e sem relacionamentos circulares)
+            var response = new UserResponseDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                RoleId = user.RoleId,
+                GroupId = user.GroupId,
+                ManagerId = user.ManagerId,
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt
+            };
+
+            return CreatedAtAction(nameof(Get), new { id = response.Id }, response);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] User updated)
+        public async Task<IActionResult> Update(int id, [FromBody] AdminUpdateUserDto dto)
         {
             var user = await _userRepository.GetByIdAsync(id);
             if (user == null) return NotFound();
 
-            // minimal mapping
-            user.Username = updated.Username;
-            user.Email = updated.Email;
-            user.RoleId = updated.RoleId;
-            user.GroupId = updated.GroupId;
-            user.ManagerId = updated.ManagerId;
+            // validate FKs to avoid 500 on DB constraints
+            var role = await _roleRepository.GetByIdAsync(dto.RoleId);
+            if (role == null) return BadRequest(new { message = "RoleId inválido" });
+            var group = await _groupRepository.GetByIdAsync(dto.GroupId);
+            if (group == null) return BadRequest(new { message = "GroupId inválido" });
+
+            // Update only provided fields
+            user.Username = dto.Username;
+            user.Email = dto.Email;
+            user.RoleId = dto.RoleId;
+            user.GroupId = dto.GroupId;
+            user.ManagerId = dto.ManagerId;
             user.UpdatedAt = DateTime.UtcNow;
 
             _userRepository.Update(user);

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Scheduler.Infrastructure.Data;
@@ -11,9 +12,11 @@ using Scheduler.Infrastructure.Data;
 namespace Scheduler.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251109022351_FinalizeSeeding")]
+    partial class FinalizeSeeding
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -78,8 +81,8 @@ namespace Scheduler.Infrastructure.Migrations
                         {
                             Id = 1,
                             CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Grupo inicial para novos usu�rios",
-                            Name = "Grupo Padr�o",
+                            Description = "Grupo inicial para novos usuários",
+                            Name = "Grupo Padrão",
                             PrimaryScheduleId = 1,
                             SecondaryScheduleId = 1,
                             UpdatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
@@ -251,7 +254,7 @@ namespace Scheduler.Infrastructure.Migrations
                         {
                             Id = 2,
                             CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            DisplayName = "Usu�rio",
+                            DisplayName = "Usuário",
                             Name = "User",
                             UpdatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         });
@@ -287,8 +290,8 @@ namespace Scheduler.Infrastructure.Migrations
                         {
                             Id = 1,
                             CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Hor�rio de fallback inicial.",
-                            Title = "Hor�rio Padr�o",
+                            Description = "Horário de fallback inicial.",
+                            Title = "Horário Padrão",
                             UpdatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         });
                 });
@@ -391,7 +394,7 @@ namespace Scheduler.Infrastructure.Migrations
                         new
                         {
                             Id = 3,
-                            DayName = "Ter�a-feira"
+                            DayName = "Terça-feira"
                         },
                         new
                         {
@@ -411,7 +414,7 @@ namespace Scheduler.Infrastructure.Migrations
                         new
                         {
                             Id = 7,
-                            DayName = "S�bado"
+                            DayName = "Sábado"
                         });
                 });
 

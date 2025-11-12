@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Scheduler.Domain.Entities;
 using Scheduler.Domain.Interfaces;
 using Scheduler.Infrastructure.Data;
@@ -21,18 +21,13 @@ namespace Scheduler.Infrastructure.Repositories
         {
             return await _context.Groups
                 .Include(g => g.PrimarySchedule)
+                    .ThenInclude(s => s.ScheduleDays)
+                        .ThenInclude(sd => sd.Weekday)
                 .Include(g => g.SecondarySchedule)
+                    .ThenInclude(s => s.ScheduleDays)
+                        .ThenInclude(sd => sd.Weekday)
                 .Include(g => g.Users)
                 .FirstOrDefaultAsync(g => g.Id == id);
-        }
-
-        public async Task<Group?> GetByNameAsync(string name)
-        {
-            return await _context.Groups
-                .Include(g => g.PrimarySchedule)
-                .Include(g => g.SecondarySchedule)
-                .Include(g => g.Users)
-                .FirstOrDefaultAsync(g => g.Name == name);
         }
 
         public async Task<List<Group>> GetAllAsync()

@@ -34,7 +34,7 @@ namespace Scheduler.Api.Controllers.Admin
                     Days = s.ScheduleDays.Select(sd => new {
                         WeekdayId = sd.WeekdayId,
                         DayName = sd.Weekday != null ? sd.Weekday.DayName : null,
-                        IsRemote = sd.IsRemote
+                        WorkMode = sd.WorkMode
                     }).ToList()
                 }).ToList();
                 return Ok(result);
@@ -57,7 +57,7 @@ namespace Scheduler.Api.Controllers.Admin
                 Days = s.ScheduleDays.Select(sd => new {
                     WeekdayId = sd.WeekdayId,
                     DayName = sd.Weekday != null ? sd.Weekday.DayName : null,
-                    IsRemote = sd.IsRemote
+                    WorkMode = sd.WorkMode
                 }).ToList()
             });
         }
@@ -95,7 +95,7 @@ namespace Scheduler.Api.Controllers.Admin
                         schedule.ScheduleDays.Add(new ScheduleDay
                         {
                             WeekdayId = d.WeekdayId,
-                            IsRemote = d.IsRemote,
+                            WorkMode = d.WorkMode,
                         });
                     }
                 }
@@ -140,7 +140,7 @@ namespace Scheduler.Api.Controllers.Admin
                     {
                         ScheduleId = s.Id,
                         WeekdayId = d.WeekdayId,
-                        IsRemote = d.IsRemote,
+                        WorkMode = d.WorkMode,
                     });
                 }
             }
